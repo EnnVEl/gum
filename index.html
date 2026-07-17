@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Тренировочный план</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #2b2b2b; color: #fff; min-height: 100vh; display: flex; justify-content: center; align-items: center; transition: background 0.3s; position: relative; }
+    .bg-layers { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+    #bgLayer { width: 100%; height: 100%; background: #2b2b2b; }
+    #gradientLayer { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+    #imageLayer { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; background-size: cover; background-position: center; opacity: 0.15; }
+    .app-container { position: relative; z-index: 1; width: 100%; max-width: 460px; margin: 10px; padding: 16px 12px 20px; background: rgba(20,20,30,0.75); backdrop-filter: blur(8px); border-radius: 32px; box-shadow: 0 20px 40px rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; align-items: center; }
+    .top-bar { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 4px; }
+    .balance-area { display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.3); padding: 6px 14px 6px 12px; border-radius: 30px; font-weight: 600; font-size: 1.1rem; border: 1px solid rgba(255,215,0,0.2); }
+    .balance-area .icon { font-size: 1.2rem; margin-right: 2px; }
+    .balance-area .value { min-width: 40px; text-align: center; }
+    .balance-area.negative .value { color: #ff6b6b; }
+    .music-controls { display: flex; gap: 6px; background: rgba(0,0,0,0.25); padding: 4px 10px; border-radius: 30px; align-items: center; }
+    .music-controls button { background: transparent; border: none; color: #fff; font-size: 1.2rem; cursor: pointer; padding: 2px 6px; transition: 0.2s; opacity: 0.8; }
+    .music-controls button:hover { opacity: 1; transform: scale(1.1); }
+    .settings-btn { background: rgba(255,255,255,0.08); border: none; color: #fff; font-size: 1.4rem; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+    .settings-btn:hover { background: rgba(255,255,255,0.18); transform: rotate(60deg); }
+
+    /* Календарь */
+    .calendar-wrapper { width: 100%; margin: 6px 0 12px; background: rgba(0,0,0,0.2); border-radius: 20px; padding: 10px 6px; overflow: hidden; }
+    .week-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .week-day-cell { aspect-ratio: 1/1; background: rgba(255,255,255,0.05); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 500; transition: 0.15s; position: relative; cursor: default; border: 1px solid transparent; }
+    .week-day-cell.today { background: rgba(255,255,255,0.12); border-color: rgba(255,215,0,0.3); }
+    .week-day-cell.completed { background: #2e7d32; border-color: #4caf50; }
+    .week-day-cell.completed::after { content: "✓"; position: absolute; top: 2px; left: 6px; font-size: 0.7rem; color: #81c784; }
+    .week-day-cell.missed { background: #7a2e2e; border-color: #e53935; }
+    .week-day-cell.missed::after { content: "✕"; position: absolute; top: 2px; left: 6px; font-size: 0.7rem; color: #ef9a9a; }
+    .week-day-cell.selected { border-color: #ffd54f; box-shadow: 0 0 0 2px rgba(255,213,79,0.3); }
+    .week-day-cell .day-num { font-size: 0.9rem; }
+    .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 6px; max-height: 0; overflow: hidden; transition: max-height 0.4s ease, opacity 0.3s ease; opacity: 0; }
+    .month-grid.open { max-height: 400px; opacity: 1; overflow-y: auto; }
+    .month-grid .week-day-cell { cursor: pointer; background: rgba(255,255,255,0.04); }
+    .month-grid .week-day-cell:hover { background: rgba(255,255,255,0.12); transform: scale(1.03); }
+    .month-grid .week-day-cell.empty { background: transparent; cursor: default; }
+
+    /* Задания дня */
+    .tasks-panel { width: 100%; background: rgba(0,0,0,0.25); border-radius: 20px; padding: 12px 10px; margin: 6px 0 10px; min-height: 120px; }
+    .tasks-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 500; color: #aaa; font-size: 0.9rem; }
+    .tasks-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .task-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.04); padding: 6px 10px 6px 8px; border-radius: 12px; transition: 0.15s; }
+    .task-item .checkbox { width: 20px; height: 20px; border-radius: 6px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: 0.15s; font-size: 0.7rem; color: #4caf50; }
+    .task-item .checkbox.done { background: #4caf50; border-color: #4caf50; color: #fff; }
+    .task-item .task-text { flex: 1; font-size: 0.85rem; line-height: 1.3; }
+    .task-item .task-points { font-size: 0.7rem; color: #ffd54f; background: rgba(255,215,0,0.12); padding: 2px 8px; border-radius: 30px; }
+    .task-item.done .task-text { opacity: 0.6; text-decoration: line-through; }
+    .btn-done { width: 100%; padding: 10px; margin-top: 6px; border: none; border-radius: 16px; font-weight: 700; font-size: 1rem; background: #37474f; color: #aaa; cursor: not-allowed; transition: 0.2s; }
+    .btn-done.active { background: #2e7d32; color: #fff; cursor: pointer; }
+    .btn-done.active:hover { background: #388e3c; transform: scale(1.01); }
+
+    /* Доп. кнопки */
+    .timer-row { display: flex; gap: 10px; width: 100%; margin-top: 6px; }
+    .timer-row button { flex: 1; padding: 10px; border: none; border-radius: 16px; background: rgba(255,255,255,0.06); color: #fff; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: 0.2s; border: 1px solid rgba(255,255,255,0.05); }
+    .timer-row button:hover { background: rgba(255,255,255,0.12); }
+
+    /* модалка */
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal.active { display: flex; }
+    .modal-content { background: #1e1e2a; border-radius: 28px; padding: 24px 20px; max-width: 420px; width: 100%; max-height: 80vh; overflow-y: auto; box-shadow: 0 30px 60px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.06); }
+    .modal-content h2 { margin-bottom: 16px; font-weight: 500; }
+    .settings-group { margin-bottom: 16px; }
+    .settings-group label { display: block; font-size: 0.8rem; color: #aaa; margin-bottom: 4px; }
+    .color-picker-wrapper { display: flex; gap: 8px; align-items: center; }
+    .color-picker-wrapper input[type="color"] { width: 40px; height: 40px; border: none; border-radius: 10px; background: transparent; cursor: pointer; }
+    .color-picker-wrapper input[type="text"] { flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 6px 10px; color: #fff; font-family: monospace; }
+    .gradient-colors { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+    .color-input-wrapper { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.03); padding: 4px 6px; border-radius: 10px; }
+    .color-input-wrapper input[type="color"] { width: 32px; height: 32px; border: none; background: transparent; cursor: pointer; }
+    .color-input-wrapper input[type="text"] { flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 4px 6px; color: #fff; font-family: monospace; font-size: 0.8rem; }
+    .color-move-btn, .remove-gradient-btn { background: rgba(255,255,255,0.05); border: none; color: #aaa; cursor: pointer; padding: 2px 6px; border-radius: 6px; font-size: 0.7rem; }
+    .color-move-btn:disabled { opacity: 0.2; cursor: default; }
+    .add-gradient-btn { background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.15); color: #aaa; padding: 6px 12px; border-radius: 30px; cursor: pointer; font-size: 0.8rem; margin-top: 4px; }
+    .checkbox-container { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+    .checkbox-container input[type="checkbox"] { width: 18px; height: 18px; accent-color: #4caf50; }
+    .slider-container { display: flex; align-items: center; gap: 12px; }
+    .slider-container input[type="range"] { flex: 1; accent-color: #4caf50; }
+    .reset-btn { background: #8d2e2e; border: none; color: #fff; padding: 8px 12px; border-radius: 30px; font-weight: 600; cursor: pointer; margin: 8px 0; }
+    .buttons { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    .buttons button { flex: 1; padding: 10px; border-radius: 30px; border: none; font-weight: 600; cursor: pointer; background: rgba(255,255,255,0.06); color: #fff; min-width: 80px; }
+    .buttons .btn-primary { background: #2e7d32; color: #fff; }
+    .notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e1e2a; padding: 10px 24px; border-radius: 40px; color: #fff; font-weight: 500; box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200; border: 1px solid rgba(255,255,255,0.05); }
+    .notification.show { opacity: 1; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #555; border-radius: 10px; }
+  </style>
+</head>
+<body>
+<div class="bg-layers">
+  <div id="bgLayer"></div>
+  <div id="gradientLayer"></div>
+  <div id="imageLayer"></div>
+</div>
+
+<div class="app-container" id="app">
+  <!-- Верхняя панель -->
+  <div class="top-bar">
+    <div class="balance-area" id="balanceArea">
+      <span class="icon">🪙</span>
+      <span class="value" id="balanceDisplay">0</span>
+    </div>
+    <div class="music-controls">
+      <button id="prevTrackBtn">⏮</button>
+      <button id="playPauseBtn">▶</button>
+      <button id="nextTrackBtn">⏭</button>
+    </div>
+    <button class="settings-btn" id="settingsBtn">⚙️</button>
+  </div>
+
+  <!-- Календарь -->
+  <div class="calendar-wrapper">
+    <div class="week-days" id="weekContainer"></div>
+    <div class="month-grid" id="monthContainer"></div>
+  </div>
+
+  <!-- Задания дня -->
+  <div class="tasks-panel" id="tasksPanel">
+    <div class="tasks-header">
+      <span id="dayLabel">Сегодня</span>
+      <span id="dayPointsLabel">+0</span>
+    </div>
+    <ul class="tasks-list" id="tasksList"></ul>
+    <button class="btn-done" id="doneBtn">✅ Завершено</button>
+  </div>
+
+  <!-- Таймер / секундомер -->
+  <div class="timer-row">
+    <button id="timerBtn">⏱️ Таймер</button>
+    <button id="stopwatchBtn">⏱️ Секундомер</button>
+  </div>
+</div>
+
+<!-- Модалка настроек -->
+<div class="modal" id="modal">
+  <div class="modal-content" id="modalContent"></div>
+</div>
+
+<div class="notification" id="notification"></div>
+
+<script>
+  // ===== ДАННЫЕ =====
+  let data = {
+    tasks: [], completed: [], store: [], tempTasks: [], notes: [],
+    balance: 0, piggyBalance: 0,
+    settings: {
+      bgColor: '#2b2b2b', textColor: '#ffffff',
+      gradientColors: ['#2b2b2b', '#1a1a2e'], bgImage: null,
+      musicVolume: 100, soundEffects: true
+    }
+  };
+
+  // ===== КОНСТАНТЫ ЗАДАНИЙ (7 дней) =====
+  const WEEK_TASKS = [
+    { day: 1, tasks: ['Жим штанги лежа', 'Жим гантелей лежа (5кг)', 'Пуловер с гантелью', 'Французский жим лежа', 'Разгибание рук с гантелью'] },
+    { day: 2, tasks: ['Тяга штанги в наклоне', 'Тяга гантели в наклоне', 'Шраги с гантелями', 'Подъем штанги на бицепс', 'Подъем гантелей на бицепс (молотки)'] },
+    { day: 3, tasks: ['Прогулка 40-60 мин', 'Легкая растяжка', 'Велосипед (опционально)'] },
+    { day: 4, tasks: ['Приседания со штангой', 'Выпады с гантелями (5кг)', 'Становая тяга', 'Жим гантелей сидя', 'Махи гантелями в стороны', 'Тяга штанги к подбородку'] },
+    { day: 5, tasks: ['Прогулка 30-40 мин', 'Растяжка'] },
+    { day: 6, tasks: ['Ягодичный мостик', 'Приседания плие', 'Махи ногами назад', 'Скручивания с гантелью', 'V-складка', 'Прогулка фермера'] },
+    { day: 7, tasks: ['Отдых'] }
+  ];
+
+  // ===== СОСТОЯНИЕ =====
+  let currentDate = new Date();
+  let selectedDate = new Date();
+  let selectedDayIndex = 0; // 0-6
+  let currentMonthDays = [];
+  let monthOpen = false;
+  let taskCheckState = {}; // { taskId: true/false }
+  let currentTasksForDay = [];
+
+  // Музыка
+  let musicAudio = null;
+  let trackIndex = 0;
+  let isPlaying = false;
+  const musicFiles = ['background1.mp3','background2.mp3','background3.mp3','background4.mp3','background5.mp3'];
+
+  // ===== ИНИЦИАЛИЗАЦИЯ =====
+  function init() {
+    loadData();
+    initMusic();
+    renderCalendar();
+    renderDayTasks(selectedDate);
+    updateDoneButton();
+    applySettings();
+    updateBalance();
+    // События
+    document.getElementById('settingsBtn').addEventListener('click', openSettings);
+    document.getElementById('doneBtn').addEventListener('click', completeDay);
+    document.getElementById('playPauseBtn').addEventListener('click', toggleMusic);
+    document.getElementById('prevTrackBtn').addEventListener('click', () => changeTrack(-1));
+    document.getElementById('nextTrackBtn').addEventListener('click', () => changeTrack(1));
+    document.getElementById('timerBtn').addEventListener('click', () => showNotification('⏱️ Таймер: 25:00 (имитация)'));
+    document.getElementById('stopwatchBtn').addEventListener('click', () => showNotification('⏱️ Секундомер запущен (имитация)'));
+    // клик по фону для закрытия месяца
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.calendar-wrapper')) closeMonth();
+    });
+  }
+
+  // ===== КАЛЕНДАРЬ =====
+  function renderCalendar() {
+    const now = new Date();
+    const year = now.getFullYear(), month = now.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const todayDate = now.getDate();
+    const todayDay = now.getDay(); // 0 вс
+
+    // Неделя (7 дней)
+    const weekContainer = document.getElementById('weekContainer');
+    weekContainer.innerHTML = '';
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    for (let i=0; i<7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(d.getDate() + i);
+      const cell = document.createElement('div');
+      cell.className = 'week-day-cell';
+      if (d.toDateString() === now.toDateString()) cell.classList.add('today');
+      // статус
+      const status = getDayStatus(d);
+      if (status === 'completed') cell.classList.add('completed');
+      else if (status === 'missed') cell.classList.add('missed');
+      cell.dataset.date = d.toISOString().split('T')[0];
+      cell.innerHTML = `<span class="day-num">${d.getDate()}</span>`;
+      cell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dt = new Date(d);
+        selectedDate = dt;
+        renderDayTasks(dt);
+        highlightWeek();
+        closeMonth();
+      });
+      weekContainer.appendChild(cell);
+    }
+
+    // Месяц (все дни)
+    const monthContainer = document.getElementById('monthContainer');
+    monthContainer.innerHTML = '';
+    const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+    for (let i=0; i<totalCells; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'week-day-cell';
+      const dayNum = i - firstDay + 1;
+      if (dayNum >= 1 && dayNum <= daysInMonth) {
+        cell.textContent = dayNum;
+        const d = new Date(year, month, dayNum);
+        const status = getDayStatus(d);
+        if (status === 'completed') cell.classList.add('completed');
+        else if (status === 'missed') cell.classList.add('missed');
+        if (d.toDateString() === now.toDateString()) cell.classList.add('today');
+        cell.dataset.date = d.toISOString().split('T')[0];
+        cell.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const dt = new Date(year, month, dayNum);
+          selectedDate = dt;
+          renderDayTasks(dt);
+          highlightWeek();
+          closeMonth();
+        });
+      } else {
+        cell.classList.add('empty');
+        cell.textContent = '';
+      }
+      monthContainer.appendChild(cell);
+    }
+
+    // Открыть месяц по свайпу (имитация pull)
+    const wrapper = document.querySelector('.calendar-wrapper');
+    let startY = 0;
+    wrapper.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; });
+    wrapper.addEventListener('touchend', (e) => {
+      const diff = startY - e.changedTouches[0].clientY;
+      if (diff < -50 && !monthOpen) { // потянули вниз
+        monthOpen = true;
+        document.getElementById('monthContainer').classList.add('open');
+      } else if (diff > 50 && monthOpen) {
+        closeMonth();
+      }
+    });
+    // мышкой
+    let mouseDownY = 0;
+    wrapper.addEventListener('mousedown', (e) => { mouseDownY = e.clientY; });
+    wrapper.addEventListener('mouseup', (e) => {
+      const diff = mouseDownY - e.clientY;
+      if (diff < -40 && !monthOpen) { monthOpen = true; document.getElementById('monthContainer').classList.add('open'); }
+      else if (diff > 40 && monthOpen) closeMonth();
+    });
+    highlightWeek();
+  }
+
+  function closeMonth() {
+    monthOpen = false;
+    document.getElementById('monthContainer').classList.remove('open');
+  }
+
+  function highlightWeek() {
+    const cells = document.querySelectorAll('.week-day-cell');
+    const sel = selectedDate.toISOString().split('T')[0];
+    cells.forEach(c => {
+      c.classList.remove('selected');
+      if (c.dataset.date === sel) c.classList.add('selected');
+    });
+  }
+
+  // ===== СТАТУС ДНЯ =====
+  function getDayStatus(date) {
+    const key = date.toISOString().split('T')[0];
+    if (data.completed.includes(key)) return 'completed';
+    const today = new Date().toISOString().split('T')[0];
+    if (key < today && !data.completed.includes(key)) return 'missed';
+    return 'normal';
+  }
+
+  // ===== ЗАДАНИЯ ДНЯ =====
+  function renderDayTasks(date) {
+    const dayOfWeek = date.getDay(); // 0 вс
+    const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 0 пн
+    const dayData = WEEK_TASKS[dayIndex] || { tasks: ['Отдых'] };
+    const tasks = dayData.tasks.map((t, idx) => ({ id: `${date.toISOString().split('T')[0]}_${idx}`, text: t, points: t.toLowerCase().includes('отдых') ? 25 : 50 }));
+    currentTasksForDay = tasks;
+    const list = document.getElementById('tasksList');
+    list.innerHTML = '';
+    const dayLabel = document.getElementById('dayLabel');
+    dayLabel.textContent = date.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'short' });
+
+    // загружаем состояние чекбоксов
+    const key = date.toISOString().split('T')[0];
+    if (!data.tempTasks) data.tempTasks = [];
+    const stored = data.tempTasks.find(t => t.date === key);
+    const doneIds = stored ? stored.doneIds : [];
+    taskCheckState = {};
+    tasks.forEach(t => { taskCheckState[t.id] = doneIds.includes(t.id); });
+
+    let totalPoints = 0;
+    tasks.forEach(t => {
+      const li = document.createElement('li');
+      li.className = 'task-item';
+      if (taskCheckState[t.id]) li.classList.add('done');
+      const cb = document.createElement('span');
+      cb.className = 'checkbox' + (taskCheckState[t.id] ? ' done' : '');
+      cb.textContent = taskCheckState[t.id] ? '✓' : '';
+      cb.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleTask(t.id, date);
+      });
+      const txt = document.createElement('span');
+      txt.className = 'task-text';
+      txt.textContent = t.text;
+      const pts = document.createElement('span');
+      pts.className = 'task-points';
+      pts.textContent = `+${t.points}`;
+      li.appendChild(cb); li.appendChild(txt); li.appendChild(pts);
+      list.appendChild(li);
+      if (taskCheckState[t.id]) totalPoints += t.points;
+    });
+    document.getElementById('dayPointsLabel').textContent = `+${totalPoints}`;
+    updateDoneButton();
+  }
+
+  function toggleTask(taskId, date) {
+    const key = date.toISOString().split('T')[0];
+    taskCheckState[taskId] = !taskCheckState[taskId];
+    // сохраняем в tempTasks
+    if (!data.tempTasks) data.tempTasks = [];
+    let entry = data.tempTasks.find(t => t.date === key);
+    if (!entry) { entry = { date: key, doneIds: [] }; data.tempTasks.push(entry); }
+    if (taskCheckState[taskId]) {
+      if (!entry.doneIds.includes(taskId)) entry.doneIds.push(taskId);
+    } else {
+      entry.doneIds = entry.doneIds.filter(id => id !== taskId);
+    }
+    saveData();
+    renderDayTasks(date);
+    updateDoneButton();
+  }
+
+  function updateDoneButton() {
+    const btn = document.getElementById('doneBtn');
+    const allChecked = currentTasksForDay.every(t => taskCheckState[t.id] === true);
+    const todayKey = new Date().toISOString().split('T')[0];
+    const isToday = selectedDate.toISOString().split('T')[0] === todayKey;
+    if (allChecked && currentTasksForDay.length > 0 && isToday && !data.completed.includes(todayKey)) {
+      btn.classList.add('active');
+      btn.disabled = false;
+    } else {
+      btn.classList.remove('active');
+      btn.disabled = true;
+    }
+  }
+
+  function completeDay() {
+    const todayKey = new Date().toISOString().split('T')[0];
+    if (data.completed.includes(todayKey)) { showNotification('Уже завершено'); return; }
+    // проверим все ли чекнуты
+    const allChecked = currentTasksForDay.every(t => taskCheckState[t.id] === true);
+    if (!allChecked) { showNotification('Выполните все задания!'); return; }
+    // начисляем баллы
+    let points = 0;
+    currentTasksForDay.forEach(t => { if (taskCheckState[t.id]) points += t.points; });
+    data.balance += points;
+    data.completed.push(todayKey);
+    // очищаем temp
+    data.tempTasks = data.tempTasks.filter(t => t.date !== todayKey);
+    saveData();
+    updateBalance();
+    renderCalendar();
+    renderDayTasks(selectedDate);
+    updateDoneButton();
+    showNotification(`✅ Завершено! +${points} баллов`);
+  }
+
+  // ===== БАЛАНС =====
+  function updateBalance() {
+    document.getElementById('balanceDisplay').textContent = data.balance;
+    const area = document.getElementById('balanceArea');
+    if (data.balance < 0) area.classList.add('negative'); else area.classList.remove('negative');
+  }
+
+  // ===== МУЗЫКА =====
+  function initMusic() {
+    // просто заглушка: создаём аудио
+    try {
+      musicAudio = new Audio();
+      musicAudio.loop = false;
+      musicAudio.volume = Math.min(1, data.settings.musicVolume / 60);
+    } catch(e){}
+  }
+
+  function toggleMusic() {
+    if (!musicAudio) return;
+    if (isPlaying) {
+      musicAudio.pause();
+      document.getElementById('playPauseBtn').textContent = '▶';
+      isPlaying = false;
+    } else {
+      // пытаемся загрузить трек
+      const file = musicFiles[trackIndex % musicFiles.length];
+      musicAudio.src = file;
+      musicAudio.play().catch(() => showNotification('Файл музыки не найден'));
+      document.getElementById('playPauseBtn').textContent = '⏸';
+      isPlaying = true;
+      musicAudio.onended = () => { changeTrack(1); };
+    }
+  }
+
+  function changeTrack(delta) {
+    trackIndex = (trackIndex + delta + musicFiles.length) % musicFiles.length;
+    if (isPlaying) {
+      const file = musicFiles[trackIndex % musicFiles.length];
+      musicAudio.src = file;
+      musicAudio.play().catch(() => showNotification('Файл не найден'));
+    }
+  }
+
+  // ===== НАСТРОЙКИ (из твоего кода) =====
+  function openSettings() {
+    const modal = document.getElementById('modal');
+    const content = document.getElementById('modalContent');
+    const gradientColors = data.settings.gradientColors || [];
+    let gradientHtml = '';
+    if (gradientColors.length > 0) {
+      gradientHtml = gradientColors.map((color, i) => `
+        <div class="color-input-wrapper">
+          <input type="color" value="${color}" onchange="updateGradientColor(${i}, this.value)" id="gradientColor_${i}">
+          <input type="text" value="${color}" onchange="updateGradientColorFromText(${i}, this.value)" onfocus="this.select()" placeholder="#000000">
+          <button class="color-move-btn" onclick="moveGradientColor(${i}, -1)" ${i === 0 ? 'disabled' : ''}>⬆</button>
+          <button class="color-move-btn" onclick="moveGradientColor(${i}, 1)" ${i === gradientColors.length - 1 ? 'disabled' : ''}>⬇</button>
+          <button class="remove-gradient-btn" onclick="removeGradientColor(${i})">✕</button>
+        </div>
+      `).join('');
+    }
+    content.innerHTML = `
+      <h2>⚙️ Настройки</h2>
+      <div class="settings-group"><label>Цвет фона:</label><div class="color-picker-wrapper">
+        <input type="color" id="bgColor" value="${data.settings.bgColor}" onchange="updateBgColorFromPicker(this.value)">
+        <input type="text" id="bgColorText" value="${data.settings.bgColor}" onchange="updateBgColorFromText(this.value)" onfocus="this.select()" placeholder="#000000">
+      </div></div>
+      <div class="settings-group"><label>Цвет текста:</label><div class="color-picker-wrapper">
+        <input type="color" id="textColor" value="${data.settings.textColor}" onchange="updateTextColorFromPicker(this.value)">
+        <input type="text" id="textColorText" value="${data.settings.textColor}" onchange="updateTextColorFromText(this.value)" onfocus="this.select()" placeholder="#000000">
+      </div></div>
+      <div class="settings-group"><label>Градиент фона (сверху вниз):</label>
+        <div class="gradient-colors" id="gradientColors">${gradientHtml || '<div style="opacity:0.5;">Нет цветов</div>'}</div>
+        <button class="add-gradient-btn" onclick="addGradientColor()">+ Добавить цвет</button>
+        ${gradientColors.length > 0 ? `<button class="add-gradient-btn" onclick="clearGradient()" style="margin-left:5px;">🗑️ Очистить</button>` : ''}
+      </div>
+      <div class="settings-group"><label>Фоновое изображение:</label>
+        <input type="file" accept="image/*" onchange="loadBackgroundImage(this)">
+        ${data.settings.bgImage ? `<button onclick="removeBgImage()" style="margin-top:5px;">🗑️ Удалить</button>` : ''}
+      </div>
+      <div class="settings-group"><label>Громкость музыки:</label>
+        <div class="slider-container"><input type="range" id="musicVolume" min="0" max="100" value="${data.settings.musicVolume}"><span id="volumeDisplay">${data.settings.musicVolume}%</span></div>
+      </div>
+      <div class="checkbox-container"><input type="checkbox" id="soundEffects" ${data.settings.soundEffects ? 'checked' : ''}><label>🔊 Звуковые эффекты</label></div>
+      <button class="reset-btn" onclick="resetAll()">🔄 Сбросить все</button>
+      <div class="buttons"><button class="btn-primary" onclick="saveSettings()">💾 Сохранить</button><button onclick="closeModal()">❌ Закрыть</button></div>
+    `;
+    document.getElementById('musicVolume').addEventListener('input', function() {
+      document.getElementById('volumeDisplay').textContent = this.value + '%';
+      data.settings.musicVolume = parseInt(this.value);
+      updateMusicVolume();
+    });
+    modal.classList.add('active');
+  }
+
+  function closeModal() { document.getElementById('modal').classList.remove('active'); }
+
+  function updateBgColorFromPicker(v) { document.getElementById('bgColorText').value = v; data.settings.bgColor = v; applySettings(); }
+  function updateBgColorFromText(v) { if (/^#[0-9a-f]{6}$/i.test(v) || /^#[0-9a-f]{3}$/i.test(v)) { document.getElementById('bgColor').value = v; data.settings.bgColor = v; applySettings(); } }
+  function updateTextColorFromPicker(v) { document.getElementById('textColorText').value = v; data.settings.textColor = v; applySettings(); }
+  function updateTextColorFromText(v) { if (/^#[0-9a-f]{6}$/i.test(v) || /^#[0-9a-f]{3}$/i.test(v)) { document.getElementById('textColor').value = v; data.settings.textColor = v; applySettings(); } }
+  function updateGradientColorFromText(index, value) { if (/^#[0-9a-f]{6}$/i.test(value) || /^#[0-9a-f]{3}$/i.test(value)) { const input = document.getElementById('gradientColor_' + index); if (input) { input.value = value; data.settings.gradientColors[index] = value; applySettings(); } } }
+  function addGradientColor() { if (!data.settings.gradientColors) data.settings.gradientColors = []; data.settings.gradientColors.push('#3c3c3c'); saveData(); openSettings(); }
+  function removeGradientColor(index) { if (data.settings.gradientColors.length > 0) { data.settings.gradientColors.splice(index, 1); saveData(); openSettings(); } }
+  function moveGradientColor(index, dir) { const ni = index + dir; if (ni < 0 || ni >= data.settings.gradientColors.length) return; const temp = data.settings.gradientColors[index]; data.settings.gradientColors[index] = data.settings.gradientColors[ni]; data.settings.gradientColors[ni] = temp; saveData(); openSettings(); }
+  function clearGradient() { data.settings.gradientColors = []; saveData(); openSettings(); }
+  function updateGradientColor(index, color) { if (data.settings.gradientColors && index < data.settings.gradientColors.length) { data.settings.gradientColors[index] = color; const textInput = document.querySelectorAll('#gradientColors .color-input-wrapper input[type="text"]')[index]; if (textInput) textInput.value = color; applySettings(); } }
+  function loadBackgroundImage(input) { const file = input.files[0]; if (file) { const reader = new FileReader(); reader.onload = function(e) { data.settings.bgImage = e.target.result; saveData(); applySettings(); openSettings(); showNotification('✅ Изображение загружено!'); }; reader.readAsDataURL(file); } }
+  function removeBgImage() { data.settings.bgImage = null; saveData(); applySettings(); openSettings(); showNotification('✅ Изображение удалено!'); }
+  function saveSettings() {
+    data.settings.bgColor = document.getElementById('bgColor').value;
+    data.settings.textColor = document.getElementById('textColor').value;
+    const colorInputs = document.querySelectorAll('#gradientColors input[type="color"]');
+    if (colorInputs.length > 0) data.settings.gradientColors = Array.from(colorInputs).map(i => i.value);
+    else data.settings.gradientColors = [];
+    data.settings.musicVolume = parseInt(document.getElementById('musicVolume').value);
+    data.settings.soundEffects = document.getElementById('soundEffects').checked;
+    applySettings(); saveData(); closeModal(); showNotification('✅ Настройки сохранены!');
+  }
+  function resetAll() { if (confirm('Сбросить все?')) { data = { tasks: [], completed: [], store: [], tempTasks: [], notes: [], balance: 0, piggyBalance: 0, settings: { bgColor: '#2b2b2b', textColor: '#ffffff', gradientColors: ['#2b2b2b', '#1a1a2e'], bgImage: null, musicVolume: 100, soundEffects: true } }; saveData(); applySettings(); renderCalendar(); renderDayTasks(new Date()); updateBalance(); closeModal(); showNotification('✅ Сброшено!'); } }
+  function applySettings() {
+    document.getElementById('bgLayer').style.backgroundColor = data.settings.bgColor;
+    const gradientLayer = document.getElementById('gradientLayer');
+    if (data.settings.gradientColors && data.settings.gradientColors.length > 1) { gradientLayer.style.background = `linear-gradient(to bottom, ${data.settings.gradientColors.join(', ')})`; gradientLayer.style.display = 'block'; } else gradientLayer.style.display = 'none';
+    const imageLayer = document.getElementById('imageLayer');
+    if (data.settings.bgImage) { imageLayer.style.backgroundImage = `url(${data.settings.bgImage})`; imageLayer.style.display = 'block'; } else imageLayer.style.display = 'none';
+    document.documentElement.style.setProperty('--text-color', data.settings.textColor);
+    document.documentElement.style.setProperty('--bg-color', data.settings.bgColor);
+    updateMusicVolume();
+  }
+  function updateMusicVolume() { if (musicAudio) { musicAudio.volume = Math.min(1, data.settings.musicVolume / 60); } }
+  function saveData() { try { localStorage.setItem('taskManagerData', JSON.stringify(data)); } catch(e) {} }
+  function loadData() { try { const saved = localStorage.getItem('taskManagerData'); if (saved) { const parsed = JSON.parse(saved); data = parsed; if (!data.tempTasks) data.tempTasks = []; if (!data.notes) data.notes = []; if (!data.piggyBalance) data.piggyBalance = 0; if (!data.settings) data.settings = { bgColor: '#2b2b2b', textColor: '#ffffff', gradientColors: ['#2b2b2b','#1a1a2e'], bgImage: null, musicVolume: 100, soundEffects: true }; if (!data.settings.gradientColors) data.settings.gradientColors = ['#2b2b2b','#1a1a2e']; if (!data.settings.musicVolume) data.settings.musicVolume = 100; } } catch(e) {} }
+  function showNotification(msg) { const n = document.getElementById('notification'); n.textContent = msg; n.classList.add('show'); clearTimeout(n.timeout); n.timeout = setTimeout(() => n.classList.remove('show'), 3000); }
+
+  // === ЗАПУСК ===
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
