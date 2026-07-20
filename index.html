@@ -12,18 +12,15 @@
     #gradientLayer { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
     #imageLayer { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; background-size: cover; background-position: center; opacity: 0.15; }
 
-    /* Окно приложения — перемещается только за стрелку */
-    .app-window { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; touch-action: none; pointer-events: none; }
+    .app-window { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; touch-action: none; pointer-events: none; will-change: transform, left, top; }
     .app-container { position: relative; z-index: 1; width: 100%; padding: 16px 12px 20px; background: rgba(20,20,30,0.6); backdrop-filter: blur(12px); border-radius: 32px; box-shadow: 0 20px 40px rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; align-items: center; pointer-events: auto; }
 
-    /* Стрелка для перемещения — справа снизу */
     .drag-arrow { position: absolute; bottom: 6px; right: 10px; width: 28px; height: 28px; cursor: grab; z-index: 10; pointer-events: auto; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); transition: 0.2s; color: rgba(255,255,255,0.4); font-size: 16px; }
     .drag-arrow:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); }
     .drag-arrow:active { cursor: grabbing; }
     .app-window.dragging .drag-arrow { cursor: grabbing; background: rgba(255,215,0,0.15); color: #ffd54f; }
     .app-window.dragging .app-container { pointer-events: none; }
 
-    /* Адаптив для телефонов */
     @media (max-width: 480px) {
       .app-window { max-width: 92vw; transform: none; left: 4vw; top: 10px; }
       .app-container { padding: 12px 8px 14px; border-radius: 24px; }
@@ -33,6 +30,8 @@
       .task-item { padding: 4px 6px; font-size: 0.75rem; }
       .timer-display, .stopwatch-display { font-size: 1.8rem; }
       .drag-arrow { bottom: 4px; right: 6px; width: 24px; height: 24px; font-size: 14px; }
+      .calendar-header .month-year { font-size: 0.9rem; }
+      .calendar-header button { font-size: 1rem; padding: 2px 8px; }
     }
 
     .top-bar { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 4px; position: relative; z-index: 6; pointer-events: auto; }
@@ -45,7 +44,6 @@
     .music-controls button:hover { opacity: 1; transform: scale(1.1); }
     .settings-btn { background: rgba(255,255,255,0.08); border: none; color: #fff; font-size: 1.4rem; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s; pointer-events: auto; }
 
-    /* Календарь — прозрачность 60% */
     .calendar-wrapper { width: 100%; margin: 6px 0 12px; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); border-radius: 20px; padding: 10px 6px; overflow: hidden; transition: background 0.3s; touch-action: pan-y; pointer-events: auto; position: relative; z-index: 2; }
     .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 0 4px 8px 4px; font-weight: 500; pointer-events: auto; }
     .calendar-header .month-year { display: flex; align-items: center; gap: 8px; }
@@ -53,10 +51,14 @@
     .calendar-header .month-year span:hover { background: rgba(255,255,255,0.1); }
     .calendar-header button { background: rgba(255,255,255,0.06); border: none; color: #fff; font-size: 1.2rem; cursor: pointer; padding: 2px 10px; border-radius: 30px; transition: 0.2s; pointer-events: auto; }
     .calendar-header button:hover { background: rgba(255,255,255,0.15); }
+    
+    .weekday-names { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; font-size: 0.65rem; color: rgba(255,255,255,0.4); text-align: center; padding: 0 2px; }
+    .weekday-names span { padding: 2px 0; }
+    
     .week-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; transition: max-height 0.3s ease, opacity 0.3s ease; overflow: hidden; pointer-events: auto; }
     .week-days.hidden { max-height: 0 !important; opacity: 0; margin: 0; padding: 0; pointer-events: none; }
     .week-day-cell { aspect-ratio: 1/1; background: rgba(255,255,255,0.08); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 500; transition: 0.15s; position: relative; cursor: pointer; border: 1px solid transparent; touch-action: none; pointer-events: auto; }
-    .week-day-cell.today { background: rgba(255,255,255,0.15); border-color: rgba(255,215,0,0.3); }
+    .week-day-cell.today { background: rgba(255,215,0,0.2); border-color: rgba(255,215,0,0.4); }
     .week-day-cell.completed { background: #2e7d32; border-color: #4caf50; }
     .week-day-cell.completed::after { content: "✓"; position: absolute; top: 2px; left: 6px; font-size: 0.7rem; color: #81c784; }
     .week-day-cell.missed { background: #7a2e2e; border-color: #e53935; }
@@ -69,7 +71,6 @@
     .month-grid .week-day-cell:hover { background: rgba(255,255,255,0.15); transform: scale(1.03); }
     .month-grid .week-day-cell.empty { background: transparent; cursor: default; }
 
-    /* Задания дня */
     .tasks-panel { width: 100%; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); border-radius: 20px; padding: 12px 10px; margin: 6px 0 10px; min-height: 100px; pointer-events: auto; position: relative; z-index: 2; }
     .tasks-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 500; color: #aaa; font-size: 0.9rem; }
     .tasks-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
@@ -112,7 +113,6 @@
     .stats-content .stat-item { display: flex; justify-content: space-between; padding: 4px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; }
     .stats-content .stat-item span:last-child { font-weight: 600; color: #ffd54f; }
 
-    /* Заметки */
     .notes-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
     .notes-container-inner { position: relative; width: 100%; height: 100%; pointer-events: none; }
     .note-item-free { position: absolute; pointer-events: auto; background: rgba(255,255,255,0.12); border-radius: 12px; padding: 8px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 8px 24px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden; backdrop-filter: blur(4px); }
@@ -124,7 +124,6 @@
     .note-item-free .note-btn { position: absolute; background: rgba(0,0,0,0.5); border: none; color: #fff; border-radius: 50%; width: 24px; height: 24px; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.15s; pointer-events: auto; z-index: 10; }
     .note-item-free .note-btn:hover { background: rgba(255,255,255,0.25); }
     .note-item-free .note-btn-delete { top: 2px; right: 2px; }
-    /* Карандаш — строго слева сверху на телефонах, справа сверху на ПК */
     .note-item-free .note-btn-edit { top: 2px; }
     @media (max-width: 480px) {
       .note-item-free .note-btn-edit { left: 2px; right: auto; }
@@ -132,7 +131,6 @@
     @media (min-width: 481px) {
       .note-item-free .note-btn-edit { right: 54px; left: auto; }
     }
-    /* Шестеренка — строго снизу слева на телефонах, справа сверху на ПК */
     .note-item-free .note-btn-color { }
     @media (max-width: 480px) {
       .note-item-free .note-btn-color { bottom: 2px; left: 2px; top: auto; right: auto; }
@@ -187,17 +185,14 @@
   <div id="imageLayer"></div>
 </div>
 
-<!-- Контейнер для заметок -->
 <div class="notes-container" id="notesContainer">
   <div class="notes-container-inner" id="notesInner"></div>
 </div>
 
 <button class="add-note-btn" id="addNoteBtn">+</button>
 
-<!-- Окно приложения -->
 <div class="app-window" id="appWindow">
   <div class="app-container" id="app">
-    <!-- Стрелка для перемещения окна -->
     <div class="drag-arrow" id="dragArrow">⤡</div>
 
     <div class="top-bar">
@@ -213,7 +208,6 @@
       <button class="settings-btn" id="settingsBtn">⚙️</button>
     </div>
 
-    <!-- Календарь -->
     <div class="calendar-wrapper" id="calendarWrapper">
       <div class="calendar-header">
         <button id="prevMonthBtn">◀</button>
@@ -223,11 +217,11 @@
         </div>
         <button id="nextMonthBtn">▶</button>
       </div>
+      <div class="weekday-names" id="weekdayNames"></div>
       <div class="week-days" id="weekContainer"></div>
       <div class="month-grid" id="monthContainer"></div>
     </div>
 
-    <!-- Задания дня -->
     <div class="tasks-panel" id="tasksPanel">
       <div class="tasks-header">
         <span id="dayLabel">Сегодня</span>
@@ -294,7 +288,7 @@
     }
   };
 
-  // ===== КОНСТАНТЫ ЗАДАНИЙ =====
+  // ===== КОНСТАНТЫ =====
   const WEEK_TASKS = [
     { day: 1, tasks: ['Жим штанги лежа', 'Жим гантелей лежа (5кг)', 'Пуловер с гантелью', 'Французский жим лежа', 'Разгибание рук с гантелью'] },
     { day: 2, tasks: ['Тяга штанги в наклоне', 'Тяга гантели в наклоне', 'Шраги с гантелями', 'Подъем штанги на бицепс', 'Подъем гантелей на бицепс (молотки)'] },
@@ -304,12 +298,13 @@
     { day: 6, tasks: ['Ягодичный мостик', 'Приседания плие', 'Махи ногами назад', 'Скручивания с гантелью', 'V-складка', 'Прогулка фермера'] },
     { day: 7, tasks: ['Отдых'] }
   ];
+  const WEEKDAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
   // ===== СОСТОЯНИЕ =====
   let currentDate = new Date();
   let selectedDate = new Date();
-  let currentMonth = new Date().getMonth();
-  let currentYear = new Date().getFullYear();
+  let currentMonth = currentDate.getMonth();
+  let currentYear = currentDate.getFullYear();
   let monthOpen = false;
   let taskCheckState = {};
   let currentTasksForDay = [];
@@ -322,6 +317,8 @@
   let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   let windowScale = 1;
   let lastTouchDist = 0;
+  let scaleTransform = '';
+  let windowPosX = null, windowPosY = null;
 
   // ===== ИНИЦИАЛИЗАЦИЯ =====
   function init() {
@@ -337,7 +334,7 @@
     updateBalance();
     loadTimerPresets();
     renderNotes();
-    // События
+    
     document.getElementById('settingsBtn').addEventListener('click', openSettings);
     document.getElementById('doneBtn').addEventListener('click', completeDay);
     document.getElementById('playPauseBtn').addEventListener('click', toggleMusic);
@@ -357,25 +354,23 @@
     document.getElementById('stopwatchResetBtn').addEventListener('click', resetStopwatch);
     document.getElementById('statsToggleBtn').addEventListener('click', toggleStatsPanel);
     document.getElementById('addNoteBtn').addEventListener('click', addNote);
-    // Перетаскивание окна ТОЛЬКО за стрелку
+    
     initWindowDrag();
-    // Вытягивание календаря
     initPullDown();
-    // Масштабирование на телефонах (сведение пальцев)
     initPinchZoom();
-    // Закрытие настроек по клику на фон
+    
     document.getElementById('modal').addEventListener('click', function(e) {
       if (e.target === this) closeModal();
     });
   }
 
-  // ===== ПЕРЕТАСКИВАНИЕ ОКНА ТОЛЬКО ЗА СТРЕЛКУ =====
+  // ===== ПЕРЕТАСКИВАНИЕ ОКНА =====
   function initWindowDrag() {
     const windowEl = document.getElementById('appWindow');
     const arrow = document.getElementById('dragArrow');
     let isDragging = false, startX, startY, origX, origY;
+    
     const onStart = (e) => {
-      // Только стрелка запускает перетаскивание
       if (!e.target.closest('.drag-arrow')) return;
       isDragging = true;
       const clientX = e.clientX || e.touches?.[0]?.clientX || 0;
@@ -386,21 +381,28 @@
       windowEl.classList.add('dragging');
       e.preventDefault?.();
     };
+    
     const onMove = (e) => {
       if (!isDragging) return;
       const clientX = e.clientX || e.touches?.[0]?.clientX || 0;
       const clientY = e.clientY || e.touches?.[0]?.clientY || 0;
       const dx = clientX - startX, dy = clientY - startY;
-      windowEl.style.left = (origX + dx) + 'px';
-      windowEl.style.top = (origY + dy) + 'px';
-      windowEl.style.transform = 'none';
+      const newX = origX + dx;
+      const newY = origY + dy;
+      windowEl.style.left = newX + 'px';
+      windowEl.style.top = newY + 'px';
+      windowEl.style.transform = scaleTransform || 'none';
+      windowPosX = newX;
+      windowPosY = newY;
     };
+    
     const onEnd = () => {
       if (isDragging) {
         isDragging = false;
         windowEl.classList.remove('dragging');
       }
     };
+    
     arrow.addEventListener('mousedown', onStart);
     arrow.addEventListener('touchstart', onStart, { passive: false });
     document.addEventListener('mousemove', onMove);
@@ -413,12 +415,14 @@
   function initPullDown() {
     const wrapper = document.getElementById('calendarWrapper');
     let startY = 0, isPulling = false;
+    
     wrapper.addEventListener('touchstart', (e) => {
       const target = e.target.closest('.week-day-cell');
       if (!target) return;
       startY = e.touches[0].clientY;
       isPulling = true;
     }, { passive: true });
+    
     wrapper.addEventListener('touchmove', (e) => {
       if (!isPulling) return;
       const diff = startY - e.touches[0].clientY;
@@ -426,14 +430,16 @@
         monthOpen = true;
         document.getElementById('monthContainer').classList.add('open');
         document.getElementById('weekContainer').classList.add('hidden');
+        document.getElementById('weekdayNames').classList.add('hidden');
         isPulling = false;
       } else if (diff > 30 && monthOpen) {
         closeMonth();
         isPulling = false;
       }
     }, { passive: true });
+    
     wrapper.addEventListener('touchend', () => { isPulling = false; }, { passive: true });
-    // Для мыши
+    
     let mouseDownY = 0, mousePulling = false;
     wrapper.addEventListener('mousedown', (e) => {
       const target = e.target.closest('.week-day-cell');
@@ -441,6 +447,7 @@
       mouseDownY = e.clientY;
       mousePulling = true;
     });
+    
     wrapper.addEventListener('mousemove', (e) => {
       if (!mousePulling) return;
       const diff = mouseDownY - e.clientY;
@@ -448,12 +455,14 @@
         monthOpen = true;
         document.getElementById('monthContainer').classList.add('open');
         document.getElementById('weekContainer').classList.add('hidden');
+        document.getElementById('weekdayNames').classList.add('hidden');
         mousePulling = false;
       } else if (diff > 30 && monthOpen) {
         closeMonth();
         mousePulling = false;
       }
     });
+    
     wrapper.addEventListener('mouseup', () => { mousePulling = false; });
   }
 
@@ -461,9 +470,10 @@
     monthOpen = false;
     document.getElementById('monthContainer').classList.remove('open');
     document.getElementById('weekContainer').classList.remove('hidden');
+    document.getElementById('weekdayNames').classList.remove('hidden');
   }
 
-  // ===== МАСШТАБИРОВАНИЕ НА ТЕЛЕФОНАХ (СВЕДЕНИЕ) =====
+  // ===== МАСШТАБИРОВАНИЕ =====
   function initPinchZoom() {
     const windowEl = document.getElementById('appWindow');
     windowEl.addEventListener('touchstart', (e) => {
@@ -473,6 +483,7 @@
         lastTouchDist = Math.sqrt(dx*dx + dy*dy);
       }
     }, { passive: true });
+    
     windowEl.addEventListener('touchmove', (e) => {
       if (e.touches.length === 2) {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -483,12 +494,14 @@
           let newScale = windowScale + delta * 0.005;
           newScale = Math.max(0.6, Math.min(1.2, newScale));
           windowScale = newScale;
-          windowEl.style.transform = `scale(${windowScale})`;
+          scaleTransform = `scale(${windowScale})`;
+          windowEl.style.transform = scaleTransform;
           windowEl.style.transformOrigin = 'center center';
           lastTouchDist = dist;
         }
       }
     }, { passive: true });
+    
     windowEl.addEventListener('touchend', (e) => {
       if (e.touches.length < 2) lastTouchDist = 0;
     }, { passive: true });
@@ -500,21 +513,33 @@
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month+1, 0).getDate();
     const today = new Date();
+    const todayDate = today.getDate();
+    const todayMonth = today.getMonth();
+    const todayYear = today.getFullYear();
 
     document.getElementById('monthLabel').textContent = new Date(year, month).toLocaleString('ru', { month: 'long' });
     document.getElementById('yearLabel').textContent = year;
 
-    // Неделя
+    // Названия дней недели (Пн-Вс)
+    const namesContainer = document.getElementById('weekdayNames');
+    namesContainer.innerHTML = WEEKDAY_NAMES.map(n => `<span>${n}</span>`).join('');
+    namesContainer.classList.remove('hidden');
+
+    // Неделя — начинаем с понедельника
     const weekContainer = document.getElementById('weekContainer');
     weekContainer.innerHTML = '';
     const startOfWeek = new Date(selectedDate);
-    startOfWeek.setDate(selectedDate.getDate() - selectedDate.getDay());
-    for (let i=0; i<7; i++) {
+    const dayOfWeek = startOfWeek.getDay();
+    const diffToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
+    startOfWeek.setDate(startOfWeek.getDate() - diffToMonday);
+    
+    for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(d.getDate() + i);
       const cell = document.createElement('div');
       cell.className = 'week-day-cell';
-      if (d.toDateString() === today.toDateString()) cell.classList.add('today');
+      const isToday = (d.getDate() === todayDate && d.getMonth() === todayMonth && d.getFullYear() === todayYear);
+      if (isToday) cell.classList.add('today');
       const status = getDayStatus(d);
       if (status === 'completed') cell.classList.add('completed');
       else if (status === 'missed') cell.classList.add('missed');
@@ -531,21 +556,25 @@
       weekContainer.appendChild(cell);
     }
 
-    // Месяц — все дни с цветами
+    // Месяц
     const monthContainer = document.getElementById('monthContainer');
     monthContainer.innerHTML = '';
-    const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
-    for (let i=0; i<totalCells; i++) {
+    // Определяем, с какого дня недели начинается месяц (0 = вс)
+    const firstDayIndex = firstDay === 0 ? 6 : firstDay - 1; // переводим в Пн-Вс (0=Пн)
+    const totalCells = Math.ceil((firstDayIndex + daysInMonth) / 7) * 7;
+    
+    for (let i = 0; i < totalCells; i++) {
       const cell = document.createElement('div');
       cell.className = 'week-day-cell';
-      const dayNum = i - firstDay + 1;
+      const dayNum = i - firstDayIndex + 1;
       if (dayNum >= 1 && dayNum <= daysInMonth) {
         cell.textContent = dayNum;
         const d = new Date(year, month, dayNum);
         const status = getDayStatus(d);
         if (status === 'completed') cell.classList.add('completed');
         else if (status === 'missed') cell.classList.add('missed');
-        if (d.toDateString() === today.toDateString()) cell.classList.add('today');
+        const isToday = (d.getDate() === todayDate && d.getMonth() === todayMonth && d.getFullYear() === todayYear);
+        if (isToday) cell.classList.add('today');
         cell.dataset.date = d.toISOString().split('T')[0];
         cell.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -573,7 +602,7 @@
 
   function showYearPicker() {
     const years = [];
-    for (let y = currentYear-20; y <= currentYear+20; y++) years.push(y);
+    for (let y = currentYear - 20; y <= currentYear + 20; y++) years.push(y);
     const modal = document.getElementById('modal');
     const content = document.getElementById('modalContent');
     content.innerHTML = `
@@ -602,8 +631,9 @@
   function getDayStatus(date) {
     const key = date.toISOString().split('T')[0];
     if (data.completed.includes(key)) return 'completed';
-    const today = new Date().toISOString().split('T')[0];
-    if (key < today && !data.completed.includes(key)) return 'missed';
+    const today = new Date();
+    const todayKey = today.toISOString().split('T')[0];
+    if (key < todayKey && !data.completed.includes(key)) return 'missed';
     return 'normal';
   }
 
@@ -1166,7 +1196,21 @@
   function updateBgColorFromPicker(v) { document.getElementById('bgColorText').value = v; data.settings.bgColor = v; applySettings(); }
   function updateBgColorFromText(v) { if (/^#[0-9a-f]{6}$/i.test(v) || /^#[0-9a-f]{3}$/i.test(v)) { document.getElementById('bgColor').value = v; data.settings.bgColor = v; applySettings(); } }
   function updateTextColorFromPicker(v) { document.getElementById('textColorText').value = v; data.settings.textColor = v; applySettings(); }
-  function updateTextColorFromText(v) { if (/^#[0-9a-f]{6}$/i.test(v) || /^#[0-9a-f]{3}$/i.test(v)) { document.getElementById('textColor').value = v; data.settings.textColor = v; applySettings(); } }
+  function updateTextColorFromText(v) { 
+    if (/^#[0-9a-f]{6}$/i.test(v) || /^#[0-9a-f]{3}$/i.test(v)) { 
+      document.getElementById('textColor').value = v; 
+      data.settings.textColor = v; 
+      applySettings(); 
+      // Применяем цвет текста ко всем элементам
+      document.querySelectorAll('.app-container, .top-bar, .balance-area, .music-controls, .settings-btn, .calendar-wrapper, .tasks-panel, .timer-row button, .timer-panel, .stopwatch-panel, .stats-panel, .btn-done, .task-item, .task-text, .tasks-header, .day-label, .week-day-cell, .weekday-names, .month-year, .calendar-header button, .drag-arrow').forEach(el => {
+        el.style.color = data.settings.textColor;
+      });
+      // Применяем к тексту в заметках
+      document.querySelectorAll('.note-text').forEach(el => {
+        el.style.color = data.settings.textColor;
+      });
+    } 
+  }
   function updateGradientColorFromText(index, value) { if (/^#[0-9a-f]{6}$/i.test(value) || /^#[0-9a-f]{3}$/i.test(value)) { const input = document.getElementById('gradientColor_' + index); if (input) { input.value = value; data.settings.gradientColors[index] = value; applySettings(); } } }
   function addGradientColor() { if (!data.settings.gradientColors) data.settings.gradientColors = []; data.settings.gradientColors.push('#3c3c3c'); saveData(); openSettings(); }
   function removeGradientColor(index) { if (data.settings.gradientColors.length > 0) { data.settings.gradientColors.splice(index, 1); saveData(); openSettings(); } }
@@ -1194,19 +1238,30 @@
     if (data.settings.bgImage) { imageLayer.style.backgroundImage = `url(${data.settings.bgImage})`; imageLayer.style.display = 'block'; } else imageLayer.style.display = 'none';
     document.documentElement.style.setProperty('--text-color', data.settings.textColor);
     document.documentElement.style.setProperty('--bg-color', data.settings.bgColor);
+    // Применяем цвет текста ко всем элементам
+    document.querySelectorAll('.app-container, .top-bar, .balance-area, .music-controls, .settings-btn, .calendar-wrapper, .tasks-panel, .timer-row button, .timer-panel, .stopwatch-panel, .stats-panel, .btn-done, .task-item, .task-text, .tasks-header, .day-label, .week-day-cell, .weekday-names, .month-year, .calendar-header button, .drag-arrow').forEach(el => {
+      el.style.color = data.settings.textColor;
+    });
+    // Применяем к тексту в заметках
+    document.querySelectorAll('.note-text').forEach(el => {
+      el.style.color = data.settings.textColor;
+    });
     updateMusicVolume();
   }
   function updateMusicVolume() { if (musicAudio) { musicAudio.volume = Math.min(1, data.settings.musicVolume / 60); } }
+  
+  // ===== СОХРАНЕНИЕ =====
   function saveData() { 
     try { 
       const json = JSON.stringify(data);
       localStorage.setItem('taskManagerData', json);
-      try { localStorage.setItem('savegame_json', json); } catch(e) {}
+      localStorage.setItem('savegame_gum_json', json);
     } catch(e) {}
   }
+  
   function loadData() { 
     try { 
-      const saved = localStorage.getItem('taskManagerData'); 
+      const saved = localStorage.getItem('savegame_gum_json') || localStorage.getItem('taskManagerData');
       if (saved) { 
         const parsed = JSON.parse(saved); 
         data = parsed; 
@@ -1217,16 +1272,10 @@
         if (!data.settings.gradientColors) data.settings.gradientColors = ['#2b2b2b','#1a1a2e']; 
         if (!data.settings.musicVolume) data.settings.musicVolume = 100; 
         if (!data.settings.customMusic) data.settings.customMusic = [];
-        try {
-          const fileSave = localStorage.getItem('savegame_json');
-          if (fileSave) {
-            const fileData = JSON.parse(fileSave);
-            Object.assign(data, fileData);
-          }
-        } catch(e) {}
       } 
     } catch(e) {} 
   }
+  
   function showNotification(msg) { const n = document.getElementById('notification'); n.textContent = msg; n.classList.add('show'); clearTimeout(n.timeout); n.timeout = setTimeout(() => n.classList.remove('show'), 3000); }
 
   document.addEventListener('DOMContentLoaded', init);
