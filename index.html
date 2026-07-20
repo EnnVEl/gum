@@ -12,10 +12,10 @@
     #gradientLayer { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
     #imageLayer { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; background-size: cover; background-position: center; opacity: 0.15; }
 
-    .app-window { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; touch-action: none; pointer-events: none; will-change: transform, left, top; }
+    .app-window { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; touch-action: none; pointer-events: none; }
     .app-container { position: relative; z-index: 1; width: 100%; padding: 16px 12px 20px; background: rgba(20,20,30,0.6); backdrop-filter: blur(12px); border-radius: 32px; box-shadow: 0 20px 40px rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; align-items: center; pointer-events: auto; }
 
-    .drag-arrow { position: absolute; bottom: 6px; right: 10px; width: 28px; height: 28px; cursor: grab; z-index: 10; pointer-events: auto; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); transition: 0.2s; color: rgba(255,255,255,0.4); font-size: 16px; }
+    .drag-arrow { position: absolute; bottom: 6px; right: 10px; width: 28px; height: 28px; cursor: grab; z-index: 10; pointer-events: auto; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); transition: 0.2s; color: rgba(255,255,255,0.4); font-size: 16px; touch-action: none; }
     .drag-arrow:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); }
     .drag-arrow:active { cursor: grabbing; }
     .app-window.dragging .drag-arrow { cursor: grabbing; background: rgba(255,215,0,0.15); color: #ffd54f; }
@@ -58,7 +58,7 @@
     .week-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; transition: max-height 0.3s ease, opacity 0.3s ease; overflow: hidden; pointer-events: auto; }
     .week-days.hidden { max-height: 0 !important; opacity: 0; margin: 0; padding: 0; pointer-events: none; }
     .week-day-cell { aspect-ratio: 1/1; background: rgba(255,255,255,0.08); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 500; transition: 0.15s; position: relative; cursor: pointer; border: 1px solid transparent; touch-action: none; pointer-events: auto; }
-    .week-day-cell.today { background: rgba(255,215,0,0.2); border-color: rgba(255,215,0,0.4); }
+    .week-day-cell.today { background: rgba(255,215,0,0.25); border-color: rgba(255,215,0,0.5); }
     .week-day-cell.completed { background: #2e7d32; border-color: #4caf50; }
     .week-day-cell.completed::after { content: "✓"; position: absolute; top: 2px; left: 6px; font-size: 0.7rem; color: #81c784; }
     .week-day-cell.missed { background: #7a2e2e; border-color: #e53935; }
@@ -117,7 +117,7 @@
     .notes-container-inner { position: relative; width: 100%; height: 100%; pointer-events: none; }
     .note-item-free { position: absolute; pointer-events: auto; background: rgba(255,255,255,0.12); border-radius: 12px; padding: 8px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 8px 24px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden; backdrop-filter: blur(4px); }
     .note-item-free .note-content { flex: 1; display: flex; flex-direction: column; }
-    .note-item-free .note-text { width: 100%; height: 100%; background: transparent; border: none; color: #fff; font-size: 0.85rem; resize: none; outline: none; font-family: inherit; padding: 2px; line-height: 1.4; pointer-events: auto; }
+    .note-item-free .note-text { width: 100%; height: 100%; background: transparent; border: none; font-size: 0.85rem; resize: none; outline: none; font-family: inherit; padding: 2px; line-height: 1.4; pointer-events: auto; }
     .note-item-free .note-text:focus { background: rgba(255,255,255,0.05); border-radius: 6px; }
     .note-item-free .note-drag-top { position: absolute; top: 0; left: 0; width: 100%; height: 20px; cursor: grab; pointer-events: auto; }
     .note-item-free .note-drag-bottom { position: absolute; bottom: 0; left: 0; width: 100%; height: 16px; cursor: grab; pointer-events: auto; }
@@ -318,7 +318,6 @@
   let windowScale = 1;
   let lastTouchDist = 0;
   let scaleTransform = '';
-  let windowPosX = null, windowPosY = null;
 
   // ===== ИНИЦИАЛИЗАЦИЯ =====
   function init() {
@@ -364,45 +363,63 @@
     });
   }
 
-  // ===== ПЕРЕТАСКИВАНИЕ ОКНА =====
+  // ===== ПЕРЕТАСКИВАНИЕ ОКНА (полностью переписано) =====
   function initWindowDrag() {
     const windowEl = document.getElementById('appWindow');
     const arrow = document.getElementById('dragArrow');
-    let isDragging = false, startX, startY, origX, origY;
-    
-    const onStart = (e) => {
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let origLeft = 0, origTop = 0;
+    let rafId = null;
+
+    function getPos(e) {
+      if (e.touches && e.touches.length > 0) {
+        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }
+      return { x: e.clientX, y: e.clientY };
+    }
+
+    function onStart(e) {
       if (!e.target.closest('.drag-arrow')) return;
       isDragging = true;
-      const clientX = e.clientX || e.touches?.[0]?.clientX || 0;
-      const clientY = e.clientY || e.touches?.[0]?.clientY || 0;
-      startX = clientX; startY = clientY;
+      const pos = getPos(e);
+      startX = pos.x;
+      startY = pos.y;
       const rect = windowEl.getBoundingClientRect();
-      origX = rect.left; origY = rect.top;
+      origLeft = rect.left;
+      origTop = rect.top;
       windowEl.classList.add('dragging');
-      e.preventDefault?.();
-    };
-    
-    const onMove = (e) => {
+      if (e.preventDefault) e.preventDefault();
+    }
+
+    function onMove(e) {
       if (!isDragging) return;
-      const clientX = e.clientX || e.touches?.[0]?.clientX || 0;
-      const clientY = e.clientY || e.touches?.[0]?.clientY || 0;
-      const dx = clientX - startX, dy = clientY - startY;
-      const newX = origX + dx;
-      const newY = origY + dy;
-      windowEl.style.left = newX + 'px';
-      windowEl.style.top = newY + 'px';
-      windowEl.style.transform = scaleTransform || 'none';
-      windowPosX = newX;
-      windowPosY = newY;
-    };
-    
-    const onEnd = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const pos = getPos(e);
+        const dx = pos.x - startX;
+        const dy = pos.y - startY;
+        const newLeft = origLeft + dx;
+        const newTop = origTop + dy;
+        windowEl.style.left = newLeft + 'px';
+        windowEl.style.top = newTop + 'px';
+        windowEl.style.transform = scaleTransform || 'none';
+        rafId = null;
+      });
+      if (e.preventDefault) e.preventDefault();
+    }
+
+    function onEnd(e) {
       if (isDragging) {
         isDragging = false;
         windowEl.classList.remove('dragging');
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
       }
-    };
-    
+    }
+
     arrow.addEventListener('mousedown', onStart);
     arrow.addEventListener('touchstart', onStart, { passive: false });
     document.addEventListener('mousemove', onMove);
@@ -507,6 +524,28 @@
     }, { passive: true });
   }
 
+  // ===== ЕДИНАЯ ФУНКЦИЯ СТАТУСА ДНЯ =====
+  function getDayStatus(date) {
+    // Используем дату без времени для корректного сравнения
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const key = `${year}-${month}-${day}`;
+    
+    // Проверяем, завершен ли день
+    if (data.completed.includes(key)) return 'completed';
+    
+    // Проверяем, прошел ли день
+    const today = new Date();
+    const todayYear = today.getFullYear();
+    const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+    const todayDay = String(today.getDate()).padStart(2, '0');
+    const todayKey = `${todayYear}-${todayMonth}-${todayDay}`;
+    
+    if (key < todayKey && !data.completed.includes(key)) return 'missed';
+    return 'normal';
+  }
+
   // ===== КАЛЕНДАРЬ =====
   function renderCalendar() {
     const month = currentMonth, year = currentYear;
@@ -520,12 +559,11 @@
     document.getElementById('monthLabel').textContent = new Date(year, month).toLocaleString('ru', { month: 'long' });
     document.getElementById('yearLabel').textContent = year;
 
-    // Названия дней недели (Пн-Вс)
     const namesContainer = document.getElementById('weekdayNames');
     namesContainer.innerHTML = WEEKDAY_NAMES.map(n => `<span>${n}</span>`).join('');
     namesContainer.classList.remove('hidden');
 
-    // Неделя — начинаем с понедельника
+    // Неделя
     const weekContainer = document.getElementById('weekContainer');
     weekContainer.innerHTML = '';
     const startOfWeek = new Date(selectedDate);
@@ -559,8 +597,7 @@
     // Месяц
     const monthContainer = document.getElementById('monthContainer');
     monthContainer.innerHTML = '';
-    // Определяем, с какого дня недели начинается месяц (0 = вс)
-    const firstDayIndex = firstDay === 0 ? 6 : firstDay - 1; // переводим в Пн-Вс (0=Пн)
+    const firstDayIndex = firstDay === 0 ? 6 : firstDay - 1;
     const totalCells = Math.ceil((firstDayIndex + daysInMonth) / 7) * 7;
     
     for (let i = 0; i < totalCells; i++) {
@@ -628,21 +665,16 @@
     });
   }
 
-  function getDayStatus(date) {
-    const key = date.toISOString().split('T')[0];
-    if (data.completed.includes(key)) return 'completed';
-    const today = new Date();
-    const todayKey = today.toISOString().split('T')[0];
-    if (key < todayKey && !data.completed.includes(key)) return 'missed';
-    return 'normal';
-  }
-
   // ===== ЗАДАНИЯ ДНЯ =====
   function renderDayTasks(date) {
     const dayOfWeek = date.getDay();
     const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     const dayData = WEEK_TASKS[dayIndex] || { tasks: ['Отдых'] };
-    const tasks = dayData.tasks.map((t, idx) => ({ id: `${date.toISOString().split('T')[0]}_${idx}`, text: t, points: t.toLowerCase().includes('отдых') ? 25 : 50 }));
+    const tasks = dayData.tasks.map((t, idx) => ({ 
+      id: `${date.toISOString().split('T')[0]}_${idx}`, 
+      text: t, 
+      points: t.toLowerCase().includes('отдых') ? 12 : 25 
+    }));
     currentTasksForDay = tasks;
     const list = document.getElementById('tasksList');
     list.innerHTML = '';
@@ -977,7 +1009,7 @@
         }
       }
       // Перетаскивание
-      let isDragging = false, startX, startY, origX, origY;
+      let isDragging2 = false, startX, startY, origX, origY;
       const startDrag = function(e) {
         const target = e.target;
         if (!target.classList.contains('note-drag-top') && !target.classList.contains('note-drag-bottom')) return;
@@ -985,7 +1017,7 @@
         const maxZ = Math.max(20, ...data.notes.map(n => n.zIndex || 5));
         data.notes[index].zIndex = maxZ + 1;
         div.style.zIndex = maxZ + 1;
-        isDragging = true;
+        isDragging2 = true;
         const clientX = e.clientX || e.touches?.[0]?.clientX || 0;
         const clientY = e.clientY || e.touches?.[0]?.clientY || 0;
         startX = clientX; startY = clientY;
@@ -994,7 +1026,7 @@
         e.preventDefault?.();
       };
       const moveDrag = function(e) {
-        if (!isDragging) return;
+        if (!isDragging2) return;
         const clientX = e.clientX || e.touches?.[0]?.clientX || 0;
         const clientY = e.clientY || e.touches?.[0]?.clientY || 0;
         const dx = clientX - startX, dy = clientY - startY;
@@ -1004,7 +1036,7 @@
         if (index < data.notes.length) { data.notes[index].x = newX; data.notes[index].y = newY; }
       };
       const endDrag = function() {
-        if (isDragging) { isDragging = false; div.classList.remove('dragging'); saveData(); }
+        if (isDragging2) { isDragging2 = false; div.classList.remove('dragging'); saveData(); }
       };
       const dragTop = div.querySelector('.note-drag-top');
       const dragBottom = div.querySelector('.note-drag-bottom');
@@ -1201,14 +1233,6 @@
       document.getElementById('textColor').value = v; 
       data.settings.textColor = v; 
       applySettings(); 
-      // Применяем цвет текста ко всем элементам
-      document.querySelectorAll('.app-container, .top-bar, .balance-area, .music-controls, .settings-btn, .calendar-wrapper, .tasks-panel, .timer-row button, .timer-panel, .stopwatch-panel, .stats-panel, .btn-done, .task-item, .task-text, .tasks-header, .day-label, .week-day-cell, .weekday-names, .month-year, .calendar-header button, .drag-arrow').forEach(el => {
-        el.style.color = data.settings.textColor;
-      });
-      // Применяем к тексту в заметках
-      document.querySelectorAll('.note-text').forEach(el => {
-        el.style.color = data.settings.textColor;
-      });
     } 
   }
   function updateGradientColorFromText(index, value) { if (/^#[0-9a-f]{6}$/i.test(value) || /^#[0-9a-f]{3}$/i.test(value)) { const input = document.getElementById('gradientColor_' + index); if (input) { input.value = value; data.settings.gradientColors[index] = value; applySettings(); } } }
@@ -1230,24 +1254,54 @@
     applySettings(); saveData(); closeModal(); showNotification('✅ Настройки сохранены!');
   }
   function resetAll() { if (confirm('Сбросить все?')) { data = { tasks: [], completed: [], store: [], tempTasks: [], notes: [], balance: 0, piggyBalance: 0, settings: { bgColor: '#2b2b2b', textColor: '#ffffff', gradientColors: ['#2b2b2b', '#1a1a2e'], bgImage: null, musicVolume: 100, soundEffects: true, customMusic: [] } }; saveData(); applySettings(); renderCalendar(); renderDayTasks(new Date()); updateBalance(); renderNotes(); closeModal(); showNotification('✅ Сброшено!'); } }
+  
   function applySettings() {
     document.getElementById('bgLayer').style.backgroundColor = data.settings.bgColor;
     const gradientLayer = document.getElementById('gradientLayer');
-    if (data.settings.gradientColors && data.settings.gradientColors.length > 1) { gradientLayer.style.background = `linear-gradient(to bottom, ${data.settings.gradientColors.join(', ')})`; gradientLayer.style.display = 'block'; } else gradientLayer.style.display = 'none';
+    if (data.settings.gradientColors && data.settings.gradientColors.length > 1) { 
+      gradientLayer.style.background = `linear-gradient(to bottom, ${data.settings.gradientColors.join(', ')})`; 
+      gradientLayer.style.display = 'block'; 
+    } else { 
+      gradientLayer.style.display = 'none'; 
+    }
     const imageLayer = document.getElementById('imageLayer');
-    if (data.settings.bgImage) { imageLayer.style.backgroundImage = `url(${data.settings.bgImage})`; imageLayer.style.display = 'block'; } else imageLayer.style.display = 'none';
-    document.documentElement.style.setProperty('--text-color', data.settings.textColor);
+    if (data.settings.bgImage) { 
+      imageLayer.style.backgroundImage = `url(${data.settings.bgImage})`; 
+      imageLayer.style.display = 'block'; 
+    } else { 
+      imageLayer.style.display = 'none'; 
+    }
+    
+    const textColor = data.settings.textColor || '#ffffff';
+    document.documentElement.style.setProperty('--text-color', textColor);
     document.documentElement.style.setProperty('--bg-color', data.settings.bgColor);
-    // Применяем цвет текста ко всем элементам
-    document.querySelectorAll('.app-container, .top-bar, .balance-area, .music-controls, .settings-btn, .calendar-wrapper, .tasks-panel, .timer-row button, .timer-panel, .stopwatch-panel, .stats-panel, .btn-done, .task-item, .task-text, .tasks-header, .day-label, .week-day-cell, .weekday-names, .month-year, .calendar-header button, .drag-arrow').forEach(el => {
-      el.style.color = data.settings.textColor;
-    });
-    // Применяем к тексту в заметках
-    document.querySelectorAll('.note-text').forEach(el => {
-      el.style.color = data.settings.textColor;
-    });
+    
+    const style = document.createElement('style');
+    style.id = 'dynamic-text-color';
+    style.textContent = `
+      .app-container, .top-bar, .balance-area, .balance-area .value, .balance-area .icon,
+      .music-controls, .music-controls button, .settings-btn, .calendar-wrapper,
+      .calendar-header, .calendar-header button, .calendar-header .month-year, .calendar-header .month-year span,
+      .weekday-names, .weekday-names span, .week-day-cell, .week-day-cell .day-num,
+      .tasks-panel, .tasks-header, .tasks-header span, .task-item .task-text,
+      .timer-row button, .timer-panel, .timer-panel *:not(input), .stopwatch-panel, .stopwatch-panel *:not(input),
+      .stats-panel, .stats-panel *, .btn-done, .drag-arrow, .note-text {
+        color: ${textColor} !important;
+      }
+      .task-points {
+        color: #ffd54f !important;
+      }
+      .timer-input-row input {
+        color: ${textColor} !important;
+      }
+    `;
+    const oldStyle = document.getElementById('dynamic-text-color');
+    if (oldStyle) oldStyle.remove();
+    document.head.appendChild(style);
+    
     updateMusicVolume();
   }
+  
   function updateMusicVolume() { if (musicAudio) { musicAudio.volume = Math.min(1, data.settings.musicVolume / 60); } }
   
   // ===== СОХРАНЕНИЕ =====
